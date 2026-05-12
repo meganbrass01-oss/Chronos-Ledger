@@ -2,95 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chronos Ledger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos Ledger | Blockchain Edition</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
     <style>
-        body { background-color: #0f1113; color: #d1d5db; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        #orb { width: 220px; height: 220px; border-radius: 50%; border: 1px solid #6366f1; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(99, 102, 241, 0.3); margin-bottom: 20px; transition: all 0.5s ease; }
-        .balance { font-size: 3rem; font-weight: bold; color: #818cf8; margin: 5px 0; }
-        .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; color: #6b7280; }
-        .controls { display: flex; flex-direction: column; width: 80%; max-width: 300px; }
-        button { background: #1a202c; color: #4fd1c5; border: 1px solid #4fd1c5; padding: 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }
-        button.mint { background: #6366f1; color: white; border: none; font-weight: bold; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
-        #status { font-size: 0.7rem; color: #9ca3af; text-align: center; margin-top: 5px; padding: 0 20px; min-height: 20px; }
-        .wallet-status { font-size: 0.6rem; color: #4fd1c5; margin-bottom: 15px; border: 1px solid #4fd1c5; padding: 4px 10px; border-radius: 20px; }
+        body { background-color: #000; color: #d1d5db; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; min-height: 100vh; }
+        #orb { width: 200px; height: 200px; border-radius: 50%; border: 1px solid #4fd1c5; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(79, 209, 197, 0.2); margin: 30px 0; }
+        .balance { font-size: 2.5rem; font-weight: bold; color: #fff; }
+        .controls { width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 10px; }
+        button { background: #111; color: #4fd1c5; border: 1px solid #4fd1c5; padding: 15px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; }
+        button:hover { background: #4fd1c5; color: #000; }
+        #status { font-size: 0.7rem; color: #888; margin: 15px 0; text-align: center; height: 20px; }
+        #history-container { width: 100%; max-width: 350px; margin-top: 30px; text-align: left; }
+        .history-item { border-bottom: 1px solid #222; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .view-btn { background: #222; border: 1px solid #444; padding: 4px 8px; font-size: 0.6rem; margin: 0; width: auto; }
     </style>
 </head>
 <body>
 
-    <div class="wallet-status" id="walletStatus" onclick="connectWallet()">Wallet: Not Connected</div>
+    <div id="walletStatus" style="font-size: 0.7rem; color: #4fd1c5;">Wallet: Disconnected</div>
 
     <div id="orb">
-        <div class="label">Current Life</div>
-        <div class="balance" id="balanceDisplay">--</div>
-        <div class="label">Chronos</div>
+        <div style="font-size: 0.6rem; letter-spacing: 2px;">LEDGER BALANCE</div>
+        <div class="balance" id="balanceDisplay">0.0</div>
+        <div style="font-size: 0.6rem; letter-spacing: 2px;">CHRONOS</div>
     </div>
+
+    <div id="status">Secure System Ready.</div>
 
     <div class="controls">
-        <button onclick="receiveTime()">Receive Time (+1)</button>
-        <button class="mint" onclick="mintToChain()">Mint to Chain (Convert to Cash)</button>
-        <button onclick="window.location.reload()">Refresh Ledger</button>
+        <button onclick="connectWallet()">1. Connect Wallet</button>
+        <button onclick="copyMyAddress()">2. Copy My Address</button>
+        <button onclick="payTime()" style="background: #4fd1c5; color: #000;">3. Pay Time (Paste Addr)</button>
     </div>
-    
-    <div id="status">Secure Vault Active.</div>
+
+    <div id="history-container">
+        <h3 style="font-size: 0.8rem; color: #4fd1c5; border-bottom: 1px solid #333; padding-bottom: 5px;">RECENT ACTIVITY</h3>
+        <div id="history-list" style="font-size: 0.7rem;">
+            <p style="color: #444;">No activity found on chain.</p>
+        </div>
+    </div>
 
     <script>
-        const GENESIS_DEPOSIT = 24.0;
-        let walletConnected = false;
+        let provider, signer, myAddress;
 
-        function init() {
-            let bal = localStorage.getItem('chronos_bal');
-            if (bal === null) {
-                localStorage.setItem('chronos_bal', GENESIS_DEPOSIT);
-                bal = GENESIS_DEPOSIT;
-            }
-            document.getElementById('balanceDisplay').innerText = parseFloat(bal).toFixed(1);
-        }
-
-        function connectWallet() {
-            // This simulates the MetaMask connection
-            walletConnected = true;
-            document.getElementById('walletStatus').innerText = "Wallet: 0x71C...4f31 (Connected)";
-            document.getElementById('status').innerText = "Bridge connected to Mainnet.";
-        }
-
-        function receiveTime() {
-            let current = parseFloat(localStorage.getItem('chronos_bal'));
-            current += 1.0;
-            localStorage.setItem('chronos_bal', current);
-            updateDisplay("Time added to ledger.");
-        }
-
-        function mintToChain() {
-            if (!walletConnected) {
-                updateDisplay("Error: Connect Wallet first (tap the top button).");
-                return;
-            }
-
-            let current = parseFloat(localStorage.getItem('chronos_bal'));
-            if (current >= 1.0) {
-                const confirmed = confirm("Minting will remove 1 Chronos from your phone to generate 1 Cashable Token in your wallet. Proceed?");
-                if (confirmed) {
-                    current -= 1.0;
-                    localStorage.setItem('chronos_bal', current);
-                    updateDisplay("Transacting... Opening Exchange Portal.");
-                    
-                    // The Redirect to the "Cash Out" Exchange
-                    setTimeout(() => {
-                        window.location.href = "https://app.uniswap.org/"; 
-                    }, 2000);
-                }
+        async function connectWallet() {
+            if (window.ethereum) {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                myAddress = await signer.getAddress();
+                document.getElementById('walletStatus').innerText = "Connected: " + myAddress.substring(0,6) + "..." + myAddress.substring(38);
+                updateStatus("Vault Link Established.");
+                updateBalance();
             } else {
-                updateDisplay("Insufficient balance.");
+                alert("Please install MetaMask to enable the real ledger.");
             }
         }
 
-        function updateDisplay(msg) {
-            document.getElementById('balanceDisplay').innerText = parseFloat(localStorage.getItem('chronos_bal')).toFixed(1);
+        async function copyMyAddress() {
+            if (!myAddress) return alert("Connect wallet first.");
+            await navigator.clipboard.writeText(myAddress);
+            updateStatus("Address Copied! Give this to your payer.");
+        }
+
+        async function payTime() {
+            if (!signer) return alert("Connect wallet first.");
+            const recipient = prompt("PASTE the Receiver's Wallet Address:");
+            if (!recipient || recipient.length !== 42) return alert("Invalid Address.");
+            
+            const amount = prompt("How many hours to send?");
+            
+            try {
+                updateStatus("Waiting for Signature...");
+                const tx = await signer.sendTransaction({
+                    to: recipient,
+                    value: ethers.utils.parseUnits(amount, 18)
+                });
+                
+                updateStatus("Transaction Pending...");
+                const receipt = await tx.wait();
+                
+                addToHistory('SENT', recipient, amount, tx.hash);
+                updateStatus("Payment Confirmed.");
+                updateBalance();
+            } catch (e) {
+                updateStatus("Transaction Cancelled.");
+            }
+        }
+
+        function addToHistory(type, addr, amt, hash) {
+            const list = document.getElementById('history-list');
+            if (list.innerHTML.includes("No activity")) list.innerHTML = "";
+            
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <div>
+                    <div style="color: ${type === 'SENT' ? '#ff4d4d' : '#4fd1c5'}">${type}</div>
+                    <div style="font-size: 0.5rem; color: #555;">${addr.substring(0,10)}...</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: bold;">${amt} HRS</div>
+                    <button class="view-btn" onclick="window.open('https://polygonscan.com/tx/${hash}', '_blank')">VIEW</button>
+                </div>
+            `;
+            list.prepend(item);
+        }
+
+        function updateStatus(msg) {
             document.getElementById('status').innerText = msg;
         }
 
-        init();
+        async function updateBalance() {
+            // Placeholder: Once the token is live, this pulls real data
+            document.getElementById('balanceDisplay').innerText = "24.0"; 
+        }
     </script>
 </body>
 </html>
