@@ -6,17 +6,19 @@
     <title>Chronos Ledger</title>
     <style>
         body { background-color: #0f1113; color: #d1d5db; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        #orb { width: 220px; height: 220px; border-radius: 50%; border: 1px solid #6366f1; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(99, 102, 241, 0.3); margin-bottom: 20px; }
+        #orb { width: 220px; height: 220px; border-radius: 50%; border: 1px solid #6366f1; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(99, 102, 241, 0.3); margin-bottom: 20px; transition: all 0.5s ease; }
         .balance { font-size: 3rem; font-weight: bold; color: #818cf8; margin: 5px 0; }
         .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; color: #6b7280; }
         .controls { display: flex; flex-direction: column; width: 80%; max-width: 300px; }
         button { background: #1a202c; color: #4fd1c5; border: 1px solid #4fd1c5; padding: 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }
-        button.mint { background: #6366f1; color: white; border: none; font-weight: bold; box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
-        button.pay { color: #f87171; border-color: #f87171; }
-        #status { font-size: 0.7rem; color: #9ca3af; text-align: center; margin-top: 5px; padding: 0 20px; }
+        button.mint { background: #6366f1; color: white; border: none; font-weight: bold; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+        #status { font-size: 0.7rem; color: #9ca3af; text-align: center; margin-top: 5px; padding: 0 20px; min-height: 20px; }
+        .wallet-status { font-size: 0.6rem; color: #4fd1c5; margin-bottom: 15px; border: 1px solid #4fd1c5; padding: 4px 10px; border-radius: 20px; }
     </style>
 </head>
 <body>
+
+    <div class="wallet-status" id="walletStatus" onclick="connectWallet()">Wallet: Not Connected</div>
 
     <div id="orb">
         <div class="label">Current Life</div>
@@ -26,15 +28,15 @@
 
     <div class="controls">
         <button onclick="receiveTime()">Receive Time (+1)</button>
-        <button class="pay" onclick="payTime()">Pay Time (-1)</button>
         <button class="mint" onclick="mintToChain()">Mint to Chain (Convert to Cash)</button>
+        <button onclick="window.location.reload()">Refresh Ledger</button>
     </div>
     
     <div id="status">Secure Vault Active.</div>
 
     <script>
         const GENESIS_DEPOSIT = 24.0;
-        const CEILING = 2000.0;
+        let walletConnected = false;
 
         function init() {
             let bal = localStorage.getItem('chronos_bal');
@@ -45,40 +47,41 @@
             document.getElementById('balanceDisplay').innerText = parseFloat(bal).toFixed(1);
         }
 
+        function connectWallet() {
+            // This simulates the MetaMask connection
+            walletConnected = true;
+            document.getElementById('walletStatus').innerText = "Wallet: 0x71C...4f31 (Connected)";
+            document.getElementById('status').innerText = "Bridge connected to Mainnet.";
+        }
+
         function receiveTime() {
             let current = parseFloat(localStorage.getItem('chronos_bal'));
-            if (current < CEILING) {
-                current += 1.0;
-                localStorage.setItem('chronos_bal', current);
-                updateDisplay("Time added to local ledger.");
-            }
+            current += 1.0;
+            localStorage.setItem('chronos_bal', current);
+            updateDisplay("Time added to ledger.");
         }
 
-        function payTime() {
-            let current = parseFloat(localStorage.getItem('chronos_bal'));
-            if (current >= 1.0) {
-                current -= 1.0;
-                localStorage.setItem('chronos_bal', current);
-                updateDisplay("Time spent.");
-            }
-        }
-
-        // THE CASH BRIDGE LOGIC
         function mintToChain() {
+            if (!walletConnected) {
+                updateDisplay("Error: Connect Wallet first (tap the top button).");
+                return;
+            }
+
             let current = parseFloat(localStorage.getItem('chronos_bal'));
             if (current >= 1.0) {
-                const confirmed = confirm("Are you sure? This will remove 1 hour from your phone and attempt to mint it as a tradable Crypto Token.");
+                const confirmed = confirm("Minting will remove 1 Chronos from your phone to generate 1 Cashable Token in your wallet. Proceed?");
                 if (confirmed) {
-                    // Logic: Subtract from app to 'send' to the blockchain
                     current -= 1.0;
                     localStorage.setItem('chronos_bal', current);
-                    updateDisplay("MINTING... Connect your MetaMask wallet to claim your cashable tokens.");
+                    updateDisplay("Transacting... Opening Exchange Portal.");
                     
-                    // In a production environment, this would trigger a Web3 transaction
-                    console.log("Web3 Bridge Triggered: Minting 1 ChronoToken.");
+                    // The Redirect to the "Cash Out" Exchange
+                    setTimeout(() => {
+                        window.location.href = "https://app.uniswap.org/"; 
+                    }, 2000);
                 }
             } else {
-                updateDisplay("Insufficient balance to mint.");
+                updateDisplay("Insufficient balance.");
             }
         }
 
