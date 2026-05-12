@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chronos Ledger</title>
+    <style>
+        body { 
+            background-color: #0f1113; 
+            color: #d1d5db; 
+            font-family: 'Courier New', Courier, monospace; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden;
+        }
+        #orb { 
+            width: 220px; 
+            height: 220px; 
+            border-radius: 50%; 
+            border: 1px solid #6366f1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3); 
+            margin-bottom: 30px; 
+            transition: all 0.5s ease;
+        }
+        .balance { font-size: 3rem; font-weight: bold; color: #818cf8; margin: 5px 0; }
+        .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; color: #6b7280; }
+        .controls { display: flex; flex-direction: column; width: 80%; max-width: 300px; }
+        button { 
+            background: #1a202c; 
+            color: #4fd1c5; 
+            border: 1px solid #4fd1c5; 
+            padding: 18px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 0.9rem; 
+            text-transform: uppercase; 
+            margin-bottom: 15px; 
+            letter-spacing: 1px;
+        }
+        button:active { background: #4fd1c5; color: #1a202c; }
+        #status { font-size: 0.8rem; color: #f87171; text-align: center; height: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="orb">
+        <div class="label">Current Life</div>
+        <div class="balance" id="balanceDisplay">--</div>
+        <div class="label">Chronos</div>
+    </div>
+
+    <div class="controls">
+        <button onclick="startHandshake()">Proximity Handshake</button>
+        <button onclick="guardianMode()">Guardian Proxy</button>
+    </div>
+    
+    <div id="status"></div>
+
+    <script>
+        // PROTOCOL CONSTANTS[span_1](start_span)[span_1](end_span)
+        const GENESIS_DEPOSIT = 24.0;
+        const CEILING = 2000.0;
+
+        // INITIALIZE WALLET[span_2](start_span)[span_2](end_span)
+        function init() {
+            let bal = localStorage.getItem('chronos_bal');
+            if (!bal) {
+                // The Breath of Life: Initial 24-hour gift[span_3](start_span)[span_3](end_span)
+                localStorage.setItem('chronos_bal', GENESIS_DEPOSIT);
+                localStorage.setItem('last_active', Date.now());
+                bal = GENESIS_DEPOSIT;
+            }
+            document.getElementById('balanceDisplay').innerText = parseFloat(bal).toFixed(1);
+            checkDecay();
+        }
+
+        // DECAY LOGIC (Demurrage)[span_4](start_span)[span_4](end_span)
+        function checkDecay() {
+            const lastActive = localStorage.getItem('last_active');
+            const oneYear = 31536000000; // ms in a year
+            if (Date.now() - lastActive > oneYear) {
+                let bal = parseFloat(localStorage.getItem('chronos_bal'));
+                bal *= 0.95; // 5% rot[span_5](start_span)[span_5](end_span)
+                localStorage.setItem('chronos_bal', bal);
+                document.getElementById('balanceDisplay').innerText = bal.toFixed(1);
+            }
+        }
+
+        // HANDSHAKE LOGIC[span_6](start_span)[span_6](end_span)
+        function startHandshake() {
+            document.getElementById('status').innerText = "Vouching proximity...";
+            
+            // Simulating the 1-hour exchange for the prototype[span_7](start_span)[span_7](end_span)
+            setTimeout(() => {
+                let current = parseFloat(localStorage.getItem('chronos_bal'));
+                if (current < CEILING) {
+                    current += 1.0; 
+                    localStorage.setItem('chronos_bal', current);
+                    localStorage.setItem('last_active', Date.now());
+                    init();
+                    document.getElementById('status').innerText = "1 Hour Verified & Added.";
+                    document.getElementById('status').style.color = "#4fd1c5";
+                } else {
+                    document.getElementById('status').innerText = "Ceiling Reached: 2000hr Max.";
+                }
+            }, 1500);
+        }
+
+        // GUARDIAN PROXY[span_8](start_span)[span_8](end_span)
+        function guardianMode() {
+            const code = prompt("Enter Guardian Authority Token:");
+            if(code) {
+                document.getElementById('status').innerText = "Proxy Authorization Active.";
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
