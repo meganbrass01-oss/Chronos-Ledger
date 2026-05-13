@@ -6,23 +6,27 @@
     <title>Chronos Ledger</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
     <style>
-        body { background-color: #050505; color: #00ffcc; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .ledger-circle { width: 250px; height: 250px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px #00ffcc; }
-        .balance { font-size: 3.5rem; font-weight: bold; margin: 10px 0; }
-        .status-box { border: 1px solid #00ffcc; padding: 20px; width: 80%; text-align: center; margin-top: 30px; background: rgba(0, 255, 204, 0.05); }
-        button { background: #00ffcc; border: none; color: #050505; padding: 15px; cursor: pointer; width: 100%; font-weight: bold; font-family: inherit; text-transform: uppercase; }
+        body { background-color: #050505; color: #00ffcc; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .ledger-circle { width: 260px; height: 260px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(0, 255, 204, 0.3); position: relative; }
+        .ledger-circle::after { content: ''; position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px; border-radius: 50%; border: 1px solid rgba(0, 255, 204, 0.1); }
+        .balance { font-size: 4rem; font-weight: bold; margin: 5px 0; text-shadow: 0 0 10px #00ffcc; }
+        .label { font-size: 0.7rem; letter-spacing: 3px; opacity: 0.8; }
+        .status-box { border: 1px solid #00ffcc; padding: 25px; width: 85%; max-width: 320px; text-align: center; margin-top: 40px; background: rgba(0, 255, 204, 0.03); }
+        #systemMessage { margin-bottom: 15px; font-size: 0.75rem; letter-spacing: 1px; color: #00ffcc; }
+        button { background: #00ffcc; border: none; color: #050505; padding: 16px; cursor: pointer; width: 100%; font-weight: bold; font-family: inherit; font-size: 0.9rem; transition: 0.3s; }
+        button:active { opacity: 0.7; transform: scale(0.98); }
     </style>
 </head>
 <body>
 
     <div class="ledger-circle">
-        <div style="font-size: 0.7rem; letter-spacing: 2px;">VAULT</div>
+        <div class="label">VAULT ACCESS</div>
         <div class="balance" id="balanceDisplay">0.0</div>
-        <div style="font-size: 0.7rem; letter-spacing: 2px;">CHRONOS</div>
+        <div class="label">CHRONOS HRS</div>
     </div>
 
     <div class="status-box">
-        <div id="systemMessage" style="margin-bottom: 10px; font-size: 0.8rem;">OFFLINE</div>
+        <div id="systemMessage">SYSTEM IDLE</div>
         <button id="actionBtn" onclick="runSystem()">Initialize</button>
     </div>
 
@@ -31,31 +35,33 @@
             const msg = document.getElementById('systemMessage');
             const btn = document.getElementById('actionBtn');
 
-            // 1. Check if we are inside MetaMask
+            // 1. Redirect Home Screen users to MetaMask to avoid 404/Connection errors
             if (!window.ethereum) {
-                msg.innerText = "SWITCHING TO METAMASK...";
-                // This "Deep Link" tells the phone to open your specific site INSIDE the MetaMask browser
-                window.location.href = "https://metamask.app.link/dapp/meganbrass01-oss.github.io";
+                msg.innerText = "OPENING METAMASK...";
+                // This link includes your specific repository folder to prevent the 404 error
+                window.location.href = "https://metamask.app.link/dapp/meganbrass01-oss.github.io/Chronos-Ledger/";
                 return;
             }
 
-            // 2. If we ARE in MetaMask, proceed with the link
+            // 2. Proceeed with connection if inside MetaMask
             try {
-                msg.innerText = "LINKING WALLET...";
+                msg.innerText = "AUTHORIZING...";
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 const userAddress = accounts[0];
 
-                msg.innerText = "CONNECTED: " + userAddress.substring(0,8) + "...";
+                msg.innerText = "SECURE LINK: " + userAddress.substring(0,8).toUpperCase() + "...";
                 btn.innerText = "MINT 24.0 HRS";
                 
+                // Change button function to Minting on second click
                 btn.onclick = function() {
                     document.getElementById('balanceDisplay').innerText = "24.0";
-                    msg.innerText = "TRANSACTION CONFIRMED";
+                    msg.innerText = "TRANSACTION VERIFIED";
                     btn.style.display = 'none';
                 };
 
             } catch (error) {
-                msg.innerText = "CONNECTION REJECTED.";
+                msg.innerText = "CONNECTION FAILED. RETRY.";
+                console.error(error);
             }
         }
     </script>
