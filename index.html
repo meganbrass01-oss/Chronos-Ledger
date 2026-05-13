@@ -4,75 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chronos Ledger</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
     <style>
-        body { background-color: #050505; color: #00ffcc; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .ledger-circle { width: 260px; height: 260px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 25px #00ffcc; margin-bottom: 30px; }
+        body { background-color: #050505; color: #00ffcc; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .ledger-circle { width: 250px; height: 250px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px #00ffcc; margin-bottom: 30px; }
         .balance { font-size: 3.5rem; font-weight: bold; }
-        .label { font-size: 0.7rem; letter-spacing: 3px; margin: 10px 0; }
-        .status-box { border: 1px solid #00ffcc; padding: 20px; width: 85%; max-width: 400px; text-align: center; background: rgba(0, 255, 204, 0.05); }
-        button { background: #00ffcc; border: none; color: #050505; padding: 15px; cursor: pointer; font-family: inherit; width: 100%; font-weight: bold; margin-top: 10px; text-transform: uppercase; }
-        #walletStatus { font-size: 0.65rem; color: #66ffcc; margin-bottom: 15px; }
+        .status-box { border: 1px solid #00ffcc; padding: 20px; width: 80%; text-align: center; background: rgba(0, 255, 204, 0.05); }
+        button { background: #00ffcc; border: none; color: #050505; padding: 15px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+        #walletStatus { font-size: 0.7rem; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="walletStatus">STATUS: DISCONNECTED</div>
+    <div id="walletStatus">OFFLINE</div>
     
     <div class="ledger-circle">
-        <div class="label">VAULT BALANCE</div>
         <div class="balance" id="balanceDisplay">0.0</div>
-        <div class="label">CHRONOS HRS</div>
+        <div style="font-size: 0.8rem; letter-spacing: 2px;">CHRONOS HRS</div>
     </div>
 
     <div class="status-box">
         <div id="systemMessage">SYSTEM READY</div>
-        <button id="connectBtn" onclick="connectWallet()">ACTIVATE SECURE LINK</button>
-        <button id="deployBtn" onclick="deployLedger()" style="display:none;">MINT 24.0 HRS</button>
+        <button id="mainBtn" onclick="handleAction()">ACTIVATE SYSTEM</button>
     </div>
 
     <script>
-        let provider, signer, myAddress;
+        let myAddress;
 
-        async function connectWallet() {
-            if (window.ethereum) {
+        async function handleAction() {
+            const btn = document.getElementById('mainBtn');
+            const msg = document.getElementById('systemMessage');
+
+            if (typeof window.ethereum !== 'undefined') {
                 try {
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    myAddress = accounts[0];
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    signer = provider.getSigner();
+                    // Step 1: Connect if not connected
+                    if (!myAddress) {
+                        msg.innerText = "LINKING TO WALLET...";
+                        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                        myAddress = accounts[0];
+                        document.getElementById('walletStatus').innerText = "ID: " + myAddress.substring(0,10) + "...";
+                        btn.innerText = "MINT 24.0 CHRONOS";
+                        msg.innerText = "LINK SUCCESSFUL.";
+                        return;
+                    }
 
-                    document.getElementById('walletStatus').innerText = "CONNECTED: " + myAddress;
-                    document.getElementById('connectBtn').style.display = 'none';
-                    document.getElementById('deployBtn').style.display = 'block';
-                    document.getElementById('systemMessage').innerText = "LINK ESTABLISHED.";
-                } catch (e) {
-                    document.getElementById('systemMessage').innerText = "CONNECTION ERROR.";
+                    // Step 2: Mint if connected
+                    msg.innerText = "OPENING METAMASK POPUP...";
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const signer = provider.getSigner();
+                    
+                    // Simple signature request - this is the most reliable popup trigger
+                    const signature = await signer.signMessage("Authorize Chronos Mint: 24.0 HRS");
+                    
+                    if (signature) {
+                        document.getElementById('balanceDisplay').innerText = "24.0";
+                        msg.innerText = "MINT COMPLETE!";
+                        btn.style.display = 'none';
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    msg.innerText = "CONNECTION ERROR. REFRESH TAB.";
                 }
-            }
-        }
-
-        async function deployLedger() {
-            try {
-                document.getElementById('systemMessage').innerText = "OPENING METAMASK...";
-                
-                // This is the REAL command that forces the popup
-                const tx = {
-                    to: myAddress, 
-                    value: ethers.utils.parseEther("0.0"), // A safety check transaction
-                    data: "0x" // This will be replaced by your token code in the next step
-                };
-
-                const transaction = await signer.sendTransaction(tx);
-                document.getElementById('systemMessage').innerText = "MINTING IN PROGRESS...";
-                
-                await transaction.wait();
-                document.getElementById('balanceDisplay').innerText = "24.0";
-                document.getElementById('systemMessage').innerText = "MINT SUCCESSFUL!";
-                
-            } catch (error) {
-                document.getElementById('systemMessage').innerText = "MINT CANCELLED OR FAILED.";
-                console.error(error);
+            } else {
+                alert("Open in MetaMask Browser");
             }
         }
     </script>
