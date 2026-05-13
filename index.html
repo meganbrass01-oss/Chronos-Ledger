@@ -46,19 +46,36 @@
     <script>
         let provider, signer, myAddress;
 
-        async function connectWallet() {
-            if (window.ethereum) {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                signer = provider.getSigner();
-                myAddress = await signer.getAddress();
-                document.getElementById('walletStatus').innerText = "Connected: " + myAddress.substring(0,6) + "..." + myAddress.substring(38);
-                updateStatus("Vault Link Established.");
-                updateBalance();
-            } else {
-                alert("Please install MetaMask to enable the real ledger.");
-            }
+     async function connectWallet() {
+    // 1. Check if the wallet is available
+    if (typeof window.ethereum !== 'undefined') {
+        try {
+            updateStatus("Waking up wallet...");
+            
+            // 2. This is the "Force" command that triggers the popup
+            const accounts = await window.ethereum.request({ 
+                method: 'eth_requestAccounts' 
+            });
+            
+            // 3. Link the data
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            myAddress = accounts[0];
+            
+            // 4. Update the screen
+            document.getElementById('walletStatus').innerText = "Connected: " + myAddress.substring(0,6) + "..." + myAddress.substring(38);
+            updateStatus("Vault Link Established.");
+            updateBalance();
+        } catch (error) {
+            console.error(error);
+            updateStatus("Connection rejected.");
         }
+    } else {
+        alert("Please use the MetaMask 'Explore' browser.");
+    }
+}
+
+        
 
         async function copyMyAddress() {
             if (!myAddress) return alert("Connect wallet first.");
