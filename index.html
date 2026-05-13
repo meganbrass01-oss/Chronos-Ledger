@@ -6,67 +6,84 @@
     <title>Chronos Ledger</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <style>
-        body { background-color: #050505; color: #00ffcc; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .ledger-circle { width: 250px; height: 250px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px #00ffcc; margin-bottom: 30px; }
-        .balance { font-size: 3rem; font-weight: bold; }
-        .label { font-size: 0.8rem; letter-spacing: 2px; margin-top: 10px; }
-        .status-box { border: 1px solid #00ffcc; padding: 15px; width: 80%; max-width: 400px; text-align: center; background: rgba(0, 255, 204, 0.05); }
-        button { background: transparent; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px 20px; cursor: pointer; font-family: inherit; margin-top: 10px; width: 100%; transition: 0.3s; }
-        button:hover { background: #00ffcc; color: #050505; }
-        #walletStatus { font-size: 0.7rem; color: #66ffcc; margin-bottom: 5px; }
+        body { background-color: #050505; color: #00ffcc; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .ledger-circle { width: 260px; height: 260px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(0, 255, 204, 0.3); margin-bottom: 30px; position: relative; }
+        .balance { font-size: 3.5rem; font-weight: bold; text-shadow: 0 0 10px #00ffcc; }
+        .label { font-size: 0.7rem; letter-spacing: 3px; margin: 10px 0; opacity: 0.8; }
+        .status-box { border: 1px solid #00ffcc; padding: 20px; width: 85%; max-width: 400px; text-align: center; background: rgba(0, 255, 204, 0.05); border-radius: 4px; }
+        button { background: #00ffcc; border: none; color: #050505; padding: 14px 20px; cursor: pointer; font-family: inherit; margin-top: 10px; width: 100%; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+        button:hover { background: #00ccaa; }
+        #walletStatus { font-size: 0.65rem; color: #66ffcc; margin-bottom: 15px; letter-spacing: 1px; }
+        .scan-line { position: absolute; width: 100%; height: 2px; background: rgba(0, 255, 204, 0.2); top: 0; animation: scan 3s linear infinite; }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
     </style>
 </head>
 <body>
 
-    <div id="walletStatus">Wallet: Disconnected</div>
+    <div id="walletStatus">NETWORK: POLYGON | STATUS: DISCONNECTED</div>
     
     <div class="ledger-circle">
-        <div class="label">LEDGER BALANCE</div>
+        <div class="scan-line"></div>
+        <div class="label">VAULT BALANCE</div>
         <div class="balance" id="balanceDisplay">0.0</div>
-        <div class="label">CHRONOS</div>
+        <div class="label">CHRONOS HRS</div>
     </div>
 
     <div class="status-box">
-        <div id="systemMessage">Secure System Ready.</div>
-        <button id="connectBtn" onclick="connectWallet()">1. CONNECT WALLET</button>
-        <button id="deployBtn" onclick="deployLedger()" style="display:none;">2. DEPLOY LEDGER</button>
+        <div id="systemMessage">INITIALIZING HANDSHAKE...</div>
+        <button id="connectBtn" onclick="connectWallet()">ACTIVATE SECURE LINK</button>
+        <button id="deployBtn" onclick="deployLedger()" style="display:none;">MINT 24.0 CHRONOS</button>
     </div>
 
     <script>
         let provider, signer, myAddress;
 
+        // The New "Silent-First" Connection Logic
         async function connectWallet() {
             if (typeof window.ethereum !== 'undefined') {
                 try {
-                    // Force a fresh request for the ACTIVE account only
-                    const accounts = await window.ethereum.request({ 
-                        method: 'eth_requestAccounts' 
-                    });
+                    document.getElementById('systemMessage').innerText = "REQUESTING ACCESS...";
                     
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    signer = provider.getSigner();
-                    myAddress = accounts[0];
-
-                    // Update UI
-                    document.getElementById('walletStatus').innerText = "Connected: " + myAddress.substring(0,6) + "..." + myAddress.substring(38);
-                    document.getElementById('connectBtn').style.display = 'none';
-                    document.getElementById('deployBtn').style.display = 'block';
-                    document.getElementById('systemMessage').innerText = "Identity Verified. Ready for Deployment.";
+                    // Step 1: Check if already authorized
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
                     
+                    if (accounts.length > 0) {
+                        finalizeConnection(accounts[0]);
+                    } else {
+                        // Step 2: If not, trigger the popup
+                        const newAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        finalizeConnection(newAccounts[0]);
+                    }
                 } catch (error) {
                     console.error(error);
-                    document.getElementById('systemMessage').innerText = "Connection Rejected. Try Again.";
+                    if (error.code === 4001) {
+                        document.getElementById('systemMessage').innerText = "LINK REJECTED BY USER.";
+                    } else {
+                        document.getElementById('systemMessage').innerText = "SECURITY BLOCK. RE-OPEN TAB.";
+                    }
                 }
             } else {
-                alert("Please open this page inside the MetaMask Explore browser.");
+                alert("Please use the MetaMask 'Explore' browser.");
             }
         }
 
+        function finalizeConnection(address) {
+            myAddress = address;
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+
+            // Update UI
+            document.getElementById('walletStatus').innerText = "ID: " + address.substring(0,8) + "..." + address.substring(36);
+            document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('deployBtn').style.display = 'block';
+            document.getElementById('systemMessage').innerText = "LINK ESTABLISHED. READY TO MINT.";
+        }
+
         function deployLedger() {
-            document.getElementById('systemMessage').innerText = "Deploying to Polygon...";
-            // We will add the actual minting logic once the connection is stable.
+            document.getElementById('systemMessage').innerText = "COMMUNICATING WITH POLYGON...";
+            // This is the placeholder for the real blockchain minting
             setTimeout(() => {
-                document.getElementById('systemMessage').innerText = "Contract Pending on Chain...";
+                document.getElementById('systemMessage').innerText = "WAITING FOR BLOCK CONFIRMATION...";
             }, 2000);
         }
     </script>
