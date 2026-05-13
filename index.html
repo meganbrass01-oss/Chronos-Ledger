@@ -10,52 +10,50 @@
         .ledger-circle { width: 250px; height: 250px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px #00ffcc; }
         .balance { font-size: 3.5rem; font-weight: bold; margin: 10px 0; }
         .status-box { border: 1px solid #00ffcc; padding: 20px; width: 80%; text-align: center; margin-top: 30px; background: rgba(0, 255, 204, 0.05); }
-        button { background: #00ffcc; border: none; color: #050505; padding: 15px; cursor: pointer; width: 100%; font-weight: bold; font-family: inherit; }
+        button { background: #00ffcc; border: none; color: #050505; padding: 15px; cursor: pointer; width: 100%; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="ledger-circle">
-        <div style="font-size: 0.7rem; letter-spacing: 2px;">VAULT</div>
         <div class="balance" id="balanceDisplay">0.0</div>
-        <div style="font-size: 0.7rem; letter-spacing: 2px;">CHRONOS</div>
+        <div style="font-size: 0.7rem; letter-spacing: 2px;">CHRONOS HRS</div>
     </div>
 
     <div class="status-box">
-        <div id="systemMessage" style="margin-bottom: 10px; font-size: 0.8rem;">OFFLINE</div>
-        <button id="actionBtn" onclick="runSystem()">INITIALIZE</button>
+        <div id="systemMessage" style="margin-bottom: 10px; font-size: 0.8rem;">SYSTEM READY</div>
+        <button id="actionBtn" onclick="runSystem()">ACTIVATE SECURE LINK</button>
     </div>
 
     <script>
-        let userAddress = null;
-
         async function runSystem() {
             const msg = document.getElementById('systemMessage');
             const btn = document.getElementById('actionBtn');
+            
+            // Wait for MetaMask to "wake up"
+            const provider = window.ethereum || (window.web3 && window.web3.currentProvider);
 
-            if (window.ethereum) {
+            if (provider) {
                 try {
-                    // Force the basic popup
-                    msg.innerText = "OPENING WALLET...";
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    userAddress = accounts[0];
+                    msg.innerText = "LINKING...";
+                    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+                    const userAddress = accounts[0];
 
-                    // Update UI
-                    msg.innerText = "CONNECTED TO: " + userAddress.substring(0,8) + "...";
+                    msg.innerText = "CONNECTED: " + userAddress.substring(0,6) + "...";
                     btn.innerText = "MINT 24.0 HRS";
                     
-                    // On second click, just show the balance
                     btn.onclick = function() {
-                        msg.innerText = "TRANSACTION CONFIRMED";
                         document.getElementById('balanceDisplay').innerText = "24.0";
+                        msg.innerText = "TRANSACTION CONFIRMED";
                         btn.style.display = 'none';
                     };
 
                 } catch (error) {
-                    msg.innerText = "REJECTED. RESET PRIVACY SETTINGS.";
+                    msg.innerText = "REJECTED. RE-OPEN TAB.";
                 }
             } else {
-                alert("Please use the MetaMask Browser");
+                msg.innerText = "PROVIDER NOT FOUND. REFRESHING...";
+                setTimeout(() => { location.reload(); }, 1000);
             }
         }
     </script>
