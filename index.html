@@ -3,137 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chronos Ledger | Blockchain Edition</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <title>Chronos Ledger</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <style>
-        body { background-color: #000; color: #d1d5db; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; min-height: 100vh; }
-        #orb { width: 200px; height: 200px; border-radius: 50%; border: 1px solid #4fd1c5; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(79, 209, 197, 0.2); margin: 30px 0; }
-        .balance { font-size: 2.5rem; font-weight: bold; color: #fff; }
-        .controls { width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 10px; }
-        button { background: #111; color: #4fd1c5; border: 1px solid #4fd1c5; padding: 15px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; }
-        button:hover { background: #4fd1c5; color: #000; }
-        #status { font-size: 0.7rem; color: #888; margin: 15px 0; text-align: center; height: 20px; }
-        #history-container { width: 100%; max-width: 350px; margin-top: 30px; text-align: left; }
-        .history-item { border-bottom: 1px solid #222; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
-        .view-btn { background: #222; border: 1px solid #444; padding: 4px 8px; font-size: 0.6rem; margin: 0; width: auto; }
+        body { background-color: #050505; color: #00ffcc; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .ledger-circle { width: 250px; height: 250px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px #00ffcc; margin-bottom: 30px; }
+        .balance { font-size: 3rem; font-weight: bold; }
+        .label { font-size: 0.8rem; letter-spacing: 2px; margin-top: 10px; }
+        .status-box { border: 1px solid #00ffcc; padding: 15px; width: 80%; max-width: 400px; text-align: center; background: rgba(0, 255, 204, 0.05); }
+        button { background: transparent; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px 20px; cursor: pointer; font-family: inherit; margin-top: 10px; width: 100%; transition: 0.3s; }
+        button:hover { background: #00ffcc; color: #050505; }
+        #walletStatus { font-size: 0.7rem; color: #66ffcc; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <div id="walletStatus" style="font-size: 0.7rem; color: #4fd1c5;">Wallet: Disconnected</div>
-
-    <div id="orb">
-        <div style="font-size: 0.6rem; letter-spacing: 2px;">LEDGER BALANCE</div>
+    <div id="walletStatus">Wallet: Disconnected</div>
+    
+    <div class="ledger-circle">
+        <div class="label">LEDGER BALANCE</div>
         <div class="balance" id="balanceDisplay">0.0</div>
-        <div style="font-size: 0.6rem; letter-spacing: 2px;">CHRONOS</div>
+        <div class="label">CHRONOS</div>
     </div>
 
-    <div id="status">Secure System Ready.</div>
-
-    <div class="controls">
-        <button onclick="connectWallet()">1. Connect Wallet</button>
-        <button onclick="copyMyAddress()">2. Copy My Address</button>
-        <button onclick="payTime()" style="background: #4fd1c5; color: #000;">3. Pay Time (Paste Addr)</button>
-    </div>
-
-    <div id="history-container">
-        <h3 style="font-size: 0.8rem; color: #4fd1c5; border-bottom: 1px solid #333; padding-bottom: 5px;">RECENT ACTIVITY</h3>
-        <div id="history-list" style="font-size: 0.7rem;">
-            <p style="color: #444;">No activity found on chain.</p>
-        </div>
+    <div class="status-box">
+        <div id="systemMessage">Secure System Ready.</div>
+        <button id="connectBtn" onclick="connectWallet()">1. CONNECT WALLET</button>
+        <button id="deployBtn" onclick="deployLedger()" style="display:none;">2. DEPLOY LEDGER</button>
     </div>
 
     <script>
         let provider, signer, myAddress;
 
-     async function connectWallet() {
-    // 1. Check if the wallet is available
-    if (typeof window.ethereum !== 'undefined') {
-        try {
-            updateStatus("Waking up wallet...");
-            
-            // 2. This is the "Force" command that triggers the popup
-            const accounts = await window.ethereum.request({ 
-                method: 'eth_requestAccounts' 
-            });
-            
-            // 3. Link the data
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = provider.getSigner();
-            myAddress = accounts[0];
-            
-            // 4. Update the screen
-            document.getElementById('walletStatus').innerText = "Connected: " + myAddress.substring(0,6) + "..." + myAddress.substring(38);
-            updateStatus("Vault Link Established.");
-            updateBalance();
-        } catch (error) {
-            console.error(error);
-            updateStatus("Connection rejected.");
-        }
-    } else {
-        alert("Please use the MetaMask 'Explore' browser.");
-    }
-}
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // Force a fresh request for the ACTIVE account only
+                    const accounts = await window.ethereum.request({ 
+                        method: 'eth_requestAccounts' 
+                    });
+                    
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    myAddress = accounts[0];
 
-        
-
-        async function copyMyAddress() {
-            if (!myAddress) return alert("Connect wallet first.");
-            await navigator.clipboard.writeText(myAddress);
-            updateStatus("Address Copied! Give this to your payer.");
-        }
-
-        async function payTime() {
-            if (!signer) return alert("Connect wallet first.");
-            const recipient = prompt("PASTE the Receiver's Wallet Address:");
-            if (!recipient || recipient.length !== 42) return alert("Invalid Address.");
-            
-            const amount = prompt("How many hours to send?");
-            
-            try {
-                updateStatus("Waiting for Signature...");
-                const tx = await signer.sendTransaction({
-                    to: recipient,
-                    value: ethers.utils.parseUnits(amount, 18)
-                });
-                
-                updateStatus("Transaction Pending...");
-                const receipt = await tx.wait();
-                
-                addToHistory('SENT', recipient, amount, tx.hash);
-                updateStatus("Payment Confirmed.");
-                updateBalance();
-            } catch (e) {
-                updateStatus("Transaction Cancelled.");
+                    // Update UI
+                    document.getElementById('walletStatus').innerText = "Connected: " + myAddress.substring(0,6) + "..." + myAddress.substring(38);
+                    document.getElementById('connectBtn').style.display = 'none';
+                    document.getElementById('deployBtn').style.display = 'block';
+                    document.getElementById('systemMessage').innerText = "Identity Verified. Ready for Deployment.";
+                    
+                } catch (error) {
+                    console.error(error);
+                    document.getElementById('systemMessage').innerText = "Connection Rejected. Try Again.";
+                }
+            } else {
+                alert("Please open this page inside the MetaMask Explore browser.");
             }
         }
 
-        function addToHistory(type, addr, amt, hash) {
-            const list = document.getElementById('history-list');
-            if (list.innerHTML.includes("No activity")) list.innerHTML = "";
-            
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `
-                <div>
-                    <div style="color: ${type === 'SENT' ? '#ff4d4d' : '#4fd1c5'}">${type}</div>
-                    <div style="font-size: 0.5rem; color: #555;">${addr.substring(0,10)}...</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-weight: bold;">${amt} HRS</div>
-                    <button class="view-btn" onclick="window.open('https://polygonscan.com/tx/${hash}', '_blank')">VIEW</button>
-                </div>
-            `;
-            list.prepend(item);
-        }
-
-        function updateStatus(msg) {
-            document.getElementById('status').innerText = msg;
-        }
-
-        async function updateBalance() {
-            // Placeholder: Once the token is live, this pulls real data
-            document.getElementById('balanceDisplay').innerText = "24.0"; 
+        function deployLedger() {
+            document.getElementById('systemMessage').innerText = "Deploying to Polygon...";
+            // We will add the actual minting logic once the connection is stable.
+            setTimeout(() => {
+                document.getElementById('systemMessage').innerText = "Contract Pending on Chain...";
+            }, 2000);
         }
     </script>
 </body>
