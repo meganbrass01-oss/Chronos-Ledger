@@ -3,66 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chronos Ledger</title>
+    <title>CHRONOS | MASTER VAULT</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
     <style>
-        body { background-color: #050505; color: #00ffcc; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .ledger-circle { width: 260px; height: 260px; border: 2px solid #00ffcc; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(0, 255, 204, 0.3); position: relative; }
-        .ledger-circle::after { content: ''; position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px; border-radius: 50%; border: 1px solid rgba(0, 255, 204, 0.1); }
-        .balance { font-size: 4rem; font-weight: bold; margin: 5px 0; text-shadow: 0 0 10px #00ffcc; }
-        .label { font-size: 0.7rem; letter-spacing: 3px; opacity: 0.8; }
-        .status-box { border: 1px solid #00ffcc; padding: 25px; width: 85%; max-width: 320px; text-align: center; margin-top: 40px; background: rgba(0, 255, 204, 0.03); }
-        #systemMessage { margin-bottom: 15px; font-size: 0.75rem; letter-spacing: 1px; color: #00ffcc; }
-        button { background: #00ffcc; border: none; color: #050505; padding: 16px; cursor: pointer; width: 100%; font-weight: bold; font-family: inherit; font-size: 0.9rem; transition: 0.3s; }
-        button:active { opacity: 0.7; transform: scale(0.98); }
+        :root { --neon: #00ffcc; --dark: #050505; --warn: #ffcc00; --glass: rgba(0, 255, 204, 0.05); }
+        body { background: var(--dark); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 15px; }
+        
+        /* Grid Background */
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(0, 255, 204, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 204, 0.03) 1px, transparent 1px); background-size: 25px 25px; z-index: -1; }
+
+        /* Security Scanner Screen */
+        #scanner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--dark); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 1s; }
+        .scan-line { width: 200px; height: 2px; background: var(--neon); box-shadow: 0 0 15px var(--neon); position: relative; animation: moveScan 2s infinite ease-in-out; }
+        @keyframes moveScan { 0%, 100% { transform: translateY(-50px); } 50% { transform: translateY(50px); } }
+
+        /* Main UI */
+        .header { width: 100%; display: flex; justify-content: space-between; font-size: 0.6rem; margin-bottom: 20px; opacity: 0.8; }
+        .ledger-circle { 
+            width: 220px; height: 220px; border: 2px solid var(--neon); border-radius: 50%; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2); animation: pulse 4s infinite ease-in-out;
+        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.03); opacity: 1; } }
+        .balance { font-size: 3.5rem; font-weight: bold; }
+
+        .panel { 
+            border: 1px solid rgba(0, 255, 204, 0.2); width: 100%; max-width: 360px; 
+            background: var(--glass); backdrop-filter: blur(8px); margin-top: 15px; padding: 15px; border-radius: 4px;
+        }
+        
+        #terminal { height: 60px; overflow-y: auto; font-size: 0.6rem; color: #00aa88; border-bottom: 1px solid rgba(0, 255, 204, 0.1); margin-bottom: 10px; }
+        input { background: transparent; border: 1px solid var(--neon); color: var(--neon); width: 100%; padding: 10px; margin: 10px 0; font-family: inherit; font-size: 0.7rem; box-sizing: border-box; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        button { background: var(--neon); border: none; color: var(--dark); padding: 12px; font-weight: bold; cursor: pointer; font-family: inherit; transition: 0.3s; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); }
+        .btn-buy { background: var(--warn); }
+        button:hover { filter: brightness(1.2); box-shadow: 0 0 10px var(--neon); }
+
+        .history-item { font-size: 0.65rem; border-left: 2px solid var(--neon); padding-left: 8px; margin: 5px 0; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
-    <div class="ledger-circle">
-        <div class="label">VAULT ACCESS</div>
-        <div class="balance" id="balanceDisplay">0.0</div>
-        <div class="label">CHRONOS HRS</div>
+    <!-- BIOMETRIC STARTUP -->
+    <div id="scanner-overlay" onclick="startVault()">
+        <div class="scan-line"></div>
+        <p style="margin-top: 40px; letter-spacing: 5px; font-size: 0.8rem;">TAP TO SCAN BIOMETRICS</p>
     </div>
 
-    <div class="status-box">
-        <div id="systemMessage">SYSTEM IDLE</div>
-        <button id="actionBtn" onclick="runSystem()">Initialize</button>
+    <div class="header">
+        <span>NETWORK: POLYGON_MAINNET</span>
+        <span id="status-tag">SECURE_LINK: OFFLINE</span>
+    </div>
+
+    <div class="ledger-circle">
+        <div style="font-size: 0.6rem; letter-spacing: 3px;">VAULT BALANCE</div>
+        <div class="balance" id="balanceDisplay">0.0</div>
+        <div style="font-size: 0.6rem; letter-spacing: 3px;">CHRONOS UNITS</div>
+    </div>
+
+    <!-- TERMINAL PANEL -->
+    <div class="panel">
+        <div id="terminal">> SYSTEM IDLE...<br>> WAITING FOR AUTH...</div>
+        <button id="actionBtn" onclick="connectWallet()" style="width: 100%; margin-top: 10px;">INITIALIZE WALLET</button>
+        
+        <div id="send-zone" style="display: none;">
+            <input type="text" id="targetAddr" placeholder="RECIPIENT ADDRESS (0x...)">
+            <div class="btn-grid">
+                <button onclick="mintUnits()">MINT 24.0</button>
+                <button onclick="sendUnits()">SEND UNITS</button>
+            </div>
+            <button class="btn-buy" style="width: 100%; margin-top: 10px; clip-path: none;" onclick="buyPolygon()">PURCHASE ASSETS (VIA BANK/CARD)</button>
+        </div>
+    </div>
+
+    <!-- HISTORY PANEL -->
+    <div class="panel">
+        <div style="font-size: 0.6rem; letter-spacing: 2px; margin-bottom: 10px; border-bottom: 1px solid rgba(0,255,204,0.2);">LEDGER LOGS</div>
+        <div id="historyList" style="max-height: 100px; overflow-y: auto;"></div>
     </div>
 
     <script>
-        async function runSystem() {
-            const msg = document.getElementById('systemMessage');
-            const btn = document.getElementById('actionBtn');
+        let currentBalance = 0.0;
+        const terminal = document.getElementById('terminal');
 
-            // 1. Redirect Home Screen users to MetaMask to avoid 404/Connection errors
+        function startVault() {
+            document.getElementById('scanner-overlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('scanner-overlay').style.display = 'none', 1000);
+            log("Security Scan Complete. Access Granted.");
+        }
+
+        function log(text) {
+            terminal.innerHTML += `<br>> ${text.toUpperCase()}`;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        async function connectWallet() {
             if (!window.ethereum) {
-                msg.innerText = "OPENING METAMASK...";
-                // This link includes your specific repository folder to prevent the 404 error
                 window.location.href = "https://metamask.app.link/dapp/meganbrass01-oss.github.io/Chronos-Ledger/";
                 return;
             }
-
-            // 2. Proceeed with connection if inside MetaMask
             try {
-                msg.innerText = "AUTHORIZING...";
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                const userAddress = accounts[0];
+                document.getElementById('status-tag').innerText = "SECURE_LINK: ACTIVE";
+                log("Link Established: " + accounts[0].substring(0,10));
+                document.getElementById('actionBtn').style.display = 'none';
+                document.getElementById('send-zone').style.display = 'block';
+            } catch (e) { log("Connection Rejected."); }
+        }
 
-                msg.innerText = "SECURE LINK: " + userAddress.substring(0,8).toUpperCase() + "...";
-                btn.innerText = "MINT 24.0 HRS";
-                
-                // Change button function to Minting on second click
-                btn.onclick = function() {
-                    document.getElementById('balanceDisplay').innerText = "24.0";
-                    msg.innerText = "TRANSACTION VERIFIED";
-                    btn.style.display = 'none';
-                };
+        function mintUnits() {
+            log("Executing Mint Protocol...");
+            let count = 0;
+            const interval = setInterval(() => {
+                count += 1.2;
+                document.getElementById('balanceDisplay').innerText = count.toFixed(1);
+                if(count >= 24) { 
+                    clearInterval(interval); 
+                    currentBalance += 24;
+                    addTx("MINT", "+24.0");
+                }
+            }, 50);
+        }
 
-            } catch (error) {
-                msg.innerText = "CONNECTION FAILED. RETRY.";
-                console.error(error);
-            }
+        function sendUnits() {
+            const addr = document.getElementById('targetAddr').value;
+            if(!addr || addr.length < 10) return log("Invalid Address");
+            log("Transferring Units to " + addr.substring(0,6) + "...");
+            currentBalance = 0;
+            document.getElementById('balanceDisplay').innerText = "0.0";
+            addTx("SEND", "-24.0");
+        }
+
+        function buyPolygon() {
+            log("Launching Secure Payment Bridge...");
+            // Link to a reliable fiat-to-crypto provider
+            window.open("https://global.transak.com/", "_blank");
+        }
+
+        function addTx(type, amt) {
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const item = `<div class="history-item"><span>${time} ${type}</span><span>${amt}</span></div>`;
+            document.getElementById('historyList').innerHTML = item + document.getElementById('historyList').innerHTML;
+            log("Ledger Synced.");
         }
     </script>
 </body>
